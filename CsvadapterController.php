@@ -6,11 +6,12 @@
  * @category OntoWiki
  * @package Extensions_csvadapter
  * @author Olga Nudel <olga.nudel@gmail.com>
- * TODO comments
  */
 
 
-
+/**
+ * csv adapter actions controller.
+ **/
 class CsvadapterController extends OntoWiki_Controller_Component
 {
 	
@@ -18,8 +19,8 @@ class CsvadapterController extends OntoWiki_Controller_Component
     private $_post = null;
     private $_parser = null;
     public $_firstline = array();
-    private $_csvf = '';
     private $_isbnInfo = array();
+    private $_csvf = '';
     
     public function init()
     {
@@ -37,23 +38,19 @@ class CsvadapterController extends OntoWiki_Controller_Component
         } else {
             $this->_model = $this->_owApp->selectedModel;
         }
-
-        /*if ($this->_request->isPost()) {
-            $this->_post = $this->_request->getPost();
-        }*/
     }
 
-         /*
-         * User Interface
-         */
+/**
+ * User Interface
+ * Action-Method for handling with upload view template
+ **/
     public function indexAction()
     {
         $logger = OntoWiki::getInstance()->logger;
         $logger->debug('indexAction');
         
+        //initialisation of view parameter
         $this->view->placeholder('main.window.title')->set('Upload CSV File');
-        
-        
         $this->view->formEncoding     = 'multipart/form-data';
         $this->view->formClass        = 'simple-input input-justify-left';
         $this->view->formMethod       = 'post';
@@ -62,7 +59,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
             'xml'   => 'XML',
             'csv'   => 'CSV'
         );
-
+		//toolbar for upload of file
         $toolbar = $this->_owApp->toolbar;
         $toolbar->appendButton(
             OntoWiki_Toolbar::SUBMIT,
@@ -73,13 +70,13 @@ class CsvadapterController extends OntoWiki_Controller_Component
         );
         $this->view->placeholder('main.window.toolbar')->set($toolbar);
         
-        
+        //request handling
         if ($this->_request->isPost()) {
          
          	$upload = new Zend_File_Transfer();
          	$filesArray = $upload->getFileInfo();
          	$this->_csvf=$filesArray['source']['tmp_name'];
-         
+         	//error messages         
             $message = '';
             switch (true) {
                 case empty($filesArray):
@@ -95,34 +92,18 @@ class CsvadapterController extends OntoWiki_Controller_Component
                     $message = 'Please select a file to upload';
                     break;
             }
-            
             if ($message != '') {
                 $this->_owApp->appendErrorMessage($message);
                 return;
             }
-         
-         
         chmod($this->_csvf, 0644);
-
+        //call parser
         $this->_parser = new Parser();
         $dt=$this->_parser->_parseFile($this->_csvf);
         
         $in = $_SERVER['DOCUMENT_ROOT'].'file.csv';
         chmod($in, 0644);
         copy ($this->_csvf, $in);
-        
-        /*$temp = fopen($in, 'wb');
-        $result = '';
-        $csvi = '';
-        foreach ($dt as $cells){
-    		foreach ($cells as $cell){
-    			$result = str_replace('"', '""', $cell);
-    			$cell = $result;
-    		}
-    		$csvi = implode(',',$cells).PHP_EOL;
-    		fwrite($temp, $csvi);
-    	}
-    	fclose($temp);*/
         
         $this->_firstline =$dt[0];        
         $isbnArr = array();
@@ -134,7 +115,6 @@ class CsvadapterController extends OntoWiki_Controller_Component
                 $this->_owApp->appendErrorMessage($message);
         	}
         }
-                     
         $_SESSION['params'] = $this->_csvf;
         if ((count($this->_firstline))>0){
         	$_SESSION['flinecount'] = count($this->_firstline);
@@ -147,15 +127,20 @@ class CsvadapterController extends OntoWiki_Controller_Component
         	}
         	$_SESSION['data']=$result;
         	}
+        	//redirect to import action
         $this->_redirect('csvadapter/import');
         }
     }
 
+ /**
+ * Action-Method for handling with import view template
+ **/
     public function importAction()
     {
         $logger = OntoWiki::getInstance()->logger;
         $logger->debug('importAction');
-               
+
+        //initialisation of view parameter
         $this->view->placeholder('main.window.title')->set('Select mapping parameter');  
         $this->view->formEncoding     = 'multipart/form-data';
         $this->view->formClass        = 'simple-input input-justify-left';
@@ -171,13 +156,14 @@ class CsvadapterController extends OntoWiki_Controller_Component
         $this->view->dt		  	  	  =  htmlspecialchars($_SESSION['data']);
         
         chmod($this->view->filename, 0644);
-	        
-
+        
+        //toolbar for import of data
         $toolbar = $this->_owApp->toolbar;
         $toolbar->appendButton(OntoWiki_Toolbar::SUBMIT, array('name' => 'Submit', 'id' => 'selection'))
                 ->appendButton(OntoWiki_Toolbar::RESET, array('name' => 'Cancel', 'id' => 'selection'));
         $this->view->placeholder('main.window.toolbar')->set($toolbar);
         
+        //handling of request
         if ($this->_request->isPost()) {
         $postData = $this->_request->getPost();
         
@@ -205,9 +191,10 @@ class CsvadapterController extends OntoWiki_Controller_Component
         					'filename' 	=> $this->view->filename
         );
         
-        
+        //create mapping
         $maippng = $this->_createMapping($paramArray);
         $maprpl1  = str_replace('"', "'", $maippng);
+        //save mapping into file
         $mapfile = $_SERVER['DOCUMENT_ROOT'].'mapping.sparql';
         chmod($mapfile, 0644);
         $fp = fopen($mapfile,"wb");
@@ -215,19 +202,21 @@ class CsvadapterController extends OntoWiki_Controller_Component
         fclose($fp);
         
         $ttl = array();
-        $ttl = $this->_convert($mapfile, $this->view->dt);
         
+        //call convert for ttl
+        $ttl = $this->_convert($mapfile, $this->view->dt);
+        //save ttl data into file
             	$file1 = tempnam(sys_get_temp_dir(), 'ow');
             	$temp = fopen($file1, 'wb');
     	foreach ($ttl as $line) {
     		fwrite($temp, $line . PHP_EOL);
-    		}
-    		fclose($temp);
-    		$filetype = 'ttl';
+    	}
+    	fclose($temp);
+    	$filetype = 'ttl';
     		
-    		$locator  = Erfurt_Syntax_RdfParser::LOCATOR_FILE;
-
-        try {
+    	$locator  = Erfurt_Syntax_RdfParser::LOCATOR_FILE;
+    	// import() call
+    	try {
                 $this->_import($file1, $filetype, $locator);
             } catch (Exception $e) {
                 $message = $e->getMessage();
@@ -237,11 +226,17 @@ class CsvadapterController extends OntoWiki_Controller_Component
 
          $this->_owApp->appendSuccessMessage('Data successfully imported.');
         
+        //after success redirect to index site 
         $this->_redirect('index');
         }
     }
     }
 
+/**
+ * Method for extraction of ISBN / URN
+ * @param file data array
+ * @return array of isbns
+ **/
     protected function _extractIsbn($csvArray){
     	
     	 $isbnArray = Array();
@@ -258,31 +253,18 @@ class CsvadapterController extends OntoWiki_Controller_Component
       }
       return $isbnArray;
     }
-    
-   protected function _extractFirstrow($csvArray){
-    	
-    	 $firstLine = Array();
-    	 $c = 0;
-    	 $i = 0;
-    	 foreach ($csvArray as $rows){
-    	 	foreach ($rows as $cell){
-    	 		if ($c == 0){
-    	 			$firstLine[$i]=$cell;
-    	 		}
-    	 		$i++;
-    	 		if ($c > 0) return;
-    	 }
-		$c++;
-      }
-      return $firstLine; 
-    }
-    
+
+/**
+ * Method for validate ISBN / URN
+ * @param array with isbns
+ **/
     protected function _validateIsbn($isbnArray){
     	
     	$j = 0;
     	$mess1 = ' is valid!';
     	$mess2 = ' is not valid or not ISBN!';
     	foreach ($isbnArray as $isbn){
+    		//13 digits isbsn
     		if (strlen($isbn) == 13){
     			$sum = 0;
     			$res = 0;
@@ -302,6 +284,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
     				$j++;
     				}
     		}
+    		// 10 digits isbns
     		if (strlen($isbn) == 10){
     		    $sum = 0;
     		    $res = 0;
@@ -323,16 +306,20 @@ class CsvadapterController extends OntoWiki_Controller_Component
     	}
     }
     
+/**
+ * Method for mapping generation
+ * @param array of data
+ * @return sparql data
+ **/
     protected function _createMapping($paramArray){
+    	
     	$firstline 	= array();
     	$firstline 	= $paramArray['firstline'];
     	$header		= $paramArray['header'];
     	$baseuri	= $paramArray['baseuri'];
     	$restype	= $paramArray['restype'];
-    	$filename	= $paramArray['filename'];
     	$pref 		= 'ab';
-    	chmod($filename, 0644);
-
+ 
     	$len = strlen($baseuri);
     	if ($baseuri[$len-1]!='/') $baseuri .= '/';
     	
@@ -342,8 +329,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
     	if ((substr_count($baseuri, 'www') == 0)&&(substr_count($baseuri, '//') > 0)){
     		$pref 	= substr($baseuri, stripos($baseuri, '//' )+2, 2);
     	}
-    	
-    	
+    	    	
     	$abc = 'abcdefghijklmnopqrstuvwxyz';
     	$map1 = '';
     	$map2 = '';
@@ -365,9 +351,19 @@ PHP_EOL.'WHERE {'.PHP_EOL.
 		'}'.PHP_EOL.
 'OFFSET 1'.PHP_EOL;	
     	} else {
+    		$j = 0;
+    		$k = 0;
     		$map1 = '?URI a '.$pref.':'.$restype.';'.PHP_EOL.'';
     		for ($i =0; $i < count($firstline); $i++){
     			$map1 .= $pref.':'.$abc[$i].' ?'.$abc[$i].';'.PHP_EOL;
+    		/*if (($abc[$i] > 0) && ($abc[$i] =='z')){
+    				$map1 .= $pref.':'.$abc[$j].$abc[$j+1].' ?'.$abc[$i].$abc[$j+1].';'.PHP_EOL;
+    				$j++;
+    			}
+    			if (($abc[$j] > 0) && ($abc[$j] =='yz')){
+    				$map1 .= $pref.':'.$abc[$k].$abc[$k+1].$abc[$k+2].' ?'.$abc[$i].$abc[$k+1].$abc[$k+2].';'.PHP_EOL;
+    				$k++;
+    			}*/
     	}
     	$map1 .= '}'.PHP_EOL;
     	$map2 = 
@@ -391,15 +387,17 @@ PHP_EOL.'WHERE {'.PHP_EOL.
     	return $mapping;
     }
     
-    protected function _convert($mapfile){
+ /**
+ * Method for converting of table into turtle
+ * uses call of extern programm
+ * @return turtle data
+ */
+    protected function _convert($mapfile, $thdt){
     	
-    	$map = $mapfile;
-    	$csvdt = $csv;
-    	chmod($map, 0644);
-    	chmod($csv, 0644);
+    	$dt = $thdt;
     	$output = array();
-    	$prgpath ='/OntoWiki/extensions/csvadapter/tarql/bin/tarql';
-    	
+    	$map = $mapfile;
+    	chmod($map, 0644);
     	chmod ($_SERVER['DOCUMENT_ROOT'], 0777);
     	$bin = $_SERVER['DOCUMENT_ROOT'].'OntoWiki/extensions/csvadapter/tarql/bin/tarql';
     	$sparqlFile = $_SERVER['DOCUMENT_ROOT'].'mapping.sparql';
@@ -407,21 +405,26 @@ PHP_EOL.'WHERE {'.PHP_EOL.
     	chmod($sparqlFile, 0644);
     	chmod($in, 0644);
 		 //.'2>&1'
+		 //Command for tarql call & tarql execute
         $command = $bin . ' ' . $sparqlFile . ' ' . $in;
         exec ($command, $output, $return);
         if ($return == 0) {
         	$this->_owApp->appendSuccessMessage('Data successfully converted!'. PHP_EOL);
-        	}
-        	
+        	}	
     	return $output;
     }
+
+/**
+ * Method for importing and saving of data in triple store
+ * @param filename, filetype(extansion), file-locator
+ */
+private function _import($file, $filetype, $locator)
     
-private function _import($fileOrUrl, $filetype, $locator)
-    {
+{
         $modelIri = (string)$this->_model;
 
         try {
-            $this->_erfurt->getStore()->importRdf($modelIri, $fileOrUrl, $filetype, $locator);
+            $this->_erfurt->getStore()->importRdf($modelIri, $file, $filetype, $locator);
         } catch (Erfurt_Exception $e) {
             // re-throw
             throw new OntoWiki_Controller_Exception(
@@ -433,7 +436,11 @@ private function _import($fileOrUrl, $filetype, $locator)
     }
 }
 
-
+/**
+ * Help-Class for Parsing for  CSV which Content must be used
+ *
+ * @author Olga Nudel <olga.nudel@gmail.com>
+ */
 class Parser 
 {
     
@@ -441,7 +448,11 @@ class Parser
 	protected $_resultArr = Array();
 	protected $_line = '';
     
-	
+/**
+ * Help-Method for Parsing
+ * @param filename
+ * @return resultArray
+ **/
     public function _parseFile($filename)
     {
 
