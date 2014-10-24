@@ -224,7 +224,6 @@ class CsvadapterController extends OntoWiki_Controller_Component
     		}
     		fclose($temp);
     		$filetype = 'ttl';
-    		echo $ttl[0];
     		
     		$locator  = Erfurt_Syntax_RdfParser::LOCATOR_FILE;
 
@@ -238,7 +237,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
 
          $this->_owApp->appendSuccessMessage('Data successfully imported.');
         
-        
+        $this->_redirect('index');
         }
     }
     }
