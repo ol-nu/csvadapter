@@ -1,0 +1,62 @@
+@prefix ex:      <http://example.com/> .
+
+<http://example.com/books/Grundlagen der Elektrotechnik>
+      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+                    ex:Buch ;
+      ex:Auflage    "16." ;
+      ex:ISBN       "3891047797" ;
+      ex:Jahr       "2013" ;
+      ex:Preis      "22,95" ;
+      ex:Seiten     "398" ;
+      ex:Titel      "Grundlagen der Elektrotechnik" ;
+      ex:URNISBN    "URN:ISBN:3891047797" ;
+      ex:Verlag_ID  "2" .
+
+<http://example.com/books/C++11 programmieren: 60 Techniken>
+      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+                    ex:Buch ;
+      ex:Auflage    "1." ;
+      ex:ISBN       "3836217325" ;
+      ex:Jahr       "2012" ;
+      ex:Preis      "29,90" ;
+      ex:Seiten     "414" ;
+      ex:Titel      "C++11 programmieren: 60 Techniken" ;
+      ex:URNISBN    "URN:ISBN:3836217325" ;
+      ex:Verlag_ID  "5" .
+
+<http://example.com/books/Datenintegration: Integrationsansätze, Beispielszenarien>
+      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+                    ex:Buch ;
+      ex:Auflage    "1." ;
+      ex:ISBN       "3446432213" ;
+      ex:Jahr       "2013" ;
+      ex:Preis      "29,99" ;
+      ex:Seiten     "226" ;
+      ex:Titel      "Datenintegration: Integrationsansätze, Beispielszenarien" ;
+      ex:URNISBN    "URN:ISBN:3446432213" ;
+      ex:Verlag_ID  "4" .
+
+<http://example.com/books/Mathematik für  Informatiker: Band 1>
+      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+                    ex:Buch ;
+      ex:Auflage    "4." ;
+      ex:ISBN       "3642379710" ;
+      ex:Jahr       "2013" ;
+      ex:Preis      "27,99" ;
+      ex:Seiten     "536" ;
+      ex:Titel      "Mathematik für  Informatiker: Band 1" ;
+      ex:URNISBN    "URN:ISBN:3642379710" ;
+      ex:Verlag_ID  "1" .
+
+<http://example.com/books/Algorithmen und Datenstrukturen: Eine Einführung mit Java>
+      <http://www.w3.org/1999/02/22-rdf-syntax-ns#type>
+                    ex:Buch ;
+      ex:Auflage    "5." ;
+      ex:ISBN       "3864901367" ;
+      ex:Jahr       "2013" ;
+      ex:Preis      "44,90" ;
+      ex:Seiten     "576" ;
+      ex:Titel      "Algorithmen und Datenstrukturen: Eine Einführung mit Java" ;
+      ex:URNISBN    "URN:ISBN:3864901367" ;
+      ex:Verlag_ID  "3" .
+

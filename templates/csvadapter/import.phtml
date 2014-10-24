@@ -1,0 +1,50 @@
+<?php
+/**
+ * OntoWiki parameter select template
+ */
+?>
+<fieldset class="activeForm" id="selection">
+    <legend><?php echo $this->_('Please select the parameter') ?></legend>
+         <div>
+    <label>
+    	<?php echo $this->_('Header') ?>
+    </label>
+    <label class="checkboxradio" for="have_head_y">
+       	<input type="radio" id="have_head_y" class="radioHeader" name="rad" value="yes"/>
+       	<?php echo $this->_('yes') ?>
+     </label>
+     <label class="checkboxradio" for="have_head_n">
+       	<input type="radio" id="have_head_n" class="radioHeader" name="rad" value="no"/>
+    	<?php echo $this->_('no') ?>
+    </label>
+    <br class="clearall" />
+    </div>
+    
+    <div>
+        <table>
+    <?php 
+     $c=0;
+     if (count($this->line) < 0){?>
+          	 <?php foreach ($this->line as $cell):?>
+          	 <tr> <input type="text" class="inp_text" name="first_l-<?php echo $c; ?>" value="<?php echo $cell;?>"/>
+          	 </tr>
+     <?php 
+     $c++;
+     endforeach;
+     }?>     
+    </table>
+     <br class="clearall" />
+    </div>
+    
+    
+       <div>
+        <label for="base-uri"><?php echo $this->_('Base URI') ?></label>
+        <input type="text" class="text" id="base-uri" name="b_uri" value="http://"/>
+        <br class="clearall" />
+    </div>
+    <div>
+        <label for="res-type"><?php echo $this->_('Ressourse Type') ?></label>
+        <input type="text" class="text" id="res-type" name="r_type" />
+        <br class="clearall" />
+    </div>
+</fieldset>

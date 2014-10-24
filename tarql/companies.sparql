@@ -1,0 +1,16 @@
+BASE <http://example.com/>
+PREFIX ex: <http://example.com/>
+
+CONSTRUCT {
+  ?URI a ex:Organization;
+      ex:name ?NameWithLang;
+      ex:CIK ?CIK;
+      ex:LEI ?LEI;
+      ex:ticker ?Stock_ticker;
+}
+FROM <file:companies.csv>
+WHERE {
+  BIND (URI(CONCAT('companies/', ?Stock_ticker)) AS ?URI)
+  BIND (STRLANG(?Name, "en") AS ?NameWithLang)
+}
+OFFSET 1
