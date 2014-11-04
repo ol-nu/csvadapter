@@ -96,13 +96,13 @@ class CsvadapterController extends OntoWiki_Controller_Component
                 $this->_owApp->appendErrorMessage($message);
                 return;
             }
-        chmod($this->_csvf, 0644);
+        //chmod($this->_csvf, 0644);
         //call parser
         $this->_parser = new Parser();
         $dt=$this->_parser->_parseFile($this->_csvf);
         
         $in = $_SERVER['DOCUMENT_ROOT'].'file.csv';
-        chmod($in, 0644);
+        //chmod($in, 0644);
         copy ($this->_csvf, $in);
         
         $this->_firstline =$dt[0];        
@@ -155,7 +155,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
         $this->view->line		  	  =  explode(';',$this->view->fline);
         $this->view->dt		  	  	  =  htmlspecialchars($_SESSION['data']);
         
-        chmod($this->view->filename, 0644);
+        //chmod($this->view->filename, 0644);
         
         //toolbar for import of data
         $toolbar = $this->_owApp->toolbar;
@@ -196,7 +196,8 @@ class CsvadapterController extends OntoWiki_Controller_Component
         $maprpl1  = str_replace('"', "'", $maippng);
         //save mapping into file
         $mapfile = $_SERVER['DOCUMENT_ROOT'].'mapping.sparql';
-        chmod($mapfile, 0644);
+        //chmod($mapfile, 0644);
+	//***********************
         $fp = fopen($mapfile,"wb");
         fwrite($fp,$maprpl1);
         fclose($fp);
@@ -227,7 +228,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
          $this->_owApp->appendSuccessMessage('Data successfully imported.');
         
         //after success redirect to index site 
-        $this->_redirect('index');
+        $this->_redirect('');
         }
     }
     }
@@ -397,13 +398,13 @@ PHP_EOL.'WHERE {'.PHP_EOL.
     	$dt = $thdt;
     	$output = array();
     	$map = $mapfile;
-    	chmod($map, 0644);
-    	chmod ($_SERVER['DOCUMENT_ROOT'], 0777);
+    	//chmod($map, 0644);
+    	//chmod ($_SERVER['DOCUMENT_ROOT'], 0777);
     	$bin = $_SERVER['DOCUMENT_ROOT'].'OntoWiki/extensions/csvadapter/tarql/bin/tarql';
     	$sparqlFile = $_SERVER['DOCUMENT_ROOT'].'mapping.sparql';
     	$in = $_SERVER['DOCUMENT_ROOT'].'file.csv';
-    	chmod($sparqlFile, 0644);
-    	chmod($in, 0644);
+    	//chmod($sparqlFile, 0644);
+    	//chmod($in, 0644);
 		 //.'2>&1'
 		 //Command for tarql call & tarql execute
         $command = $bin . ' ' . $sparqlFile . ' ' . $in;
@@ -457,7 +458,7 @@ class Parser
     {
 
     	$this->_file = $filename;
-    	chmod($this->_file, 0644);
+    	//chmod($this->_file, 0644);
     	$fileHandle = fopen($this->_file, 'r');
         
         $message = '';
