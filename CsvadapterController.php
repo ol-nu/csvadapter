@@ -96,13 +96,12 @@ class CsvadapterController extends OntoWiki_Controller_Component
                 $this->_owApp->appendErrorMessage($message);
                 return;
             }
-        //chmod($this->_csvf, 0644);
+        
         //call parser
         $this->_parser = new Parser();
         $dt=$this->_parser->_parseFile($this->_csvf);
         
-        $in = $_SERVER['DOCUMENT_ROOT'].'file.csv';
-        //chmod($in, 0644);
+        $in = tempnam(sys_get_temp_dir(), 'ow');
         copy ($this->_csvf, $in);
         
         $this->_firstline =$dt[0];        
@@ -115,17 +114,10 @@ class CsvadapterController extends OntoWiki_Controller_Component
                 $this->_owApp->appendErrorMessage($message);
         	}
         }
-        $_SESSION['params'] = $this->_csvf;
+        $_SESSION['fname'] = $in;
         if ((count($this->_firstline))>0){
         	$_SESSION['flinecount'] = count($this->_firstline);
         	$_SESSION['fline']=implode(';',$this->_firstline);
-        	$result = '';
-        	$res = array();
-        	foreach ($dt as $cells){
-        		$res = $cells;
-        		$result .= implode(';;;',$res).';;;;';
-        	}
-        	$_SESSION['data']=$result;
         	}
         	//redirect to import action
         $this->_redirect('csvadapter/import');
@@ -146,17 +138,14 @@ class CsvadapterController extends OntoWiki_Controller_Component
         $this->view->formClass        = 'simple-input input-justify-left';
         $this->view->formMethod       = 'post';
         $this->view->formName         = 'selection';
-        $this->view->filename		  = htmlspecialchars($_SESSION['params']);
+        $this->view->filename		  = htmlspecialchars($_SESSION['fname']);
         $this->view->restype   		  = '';
         $this->view->baseuri		  = '';
         $this->view->header		  	  = '';
         $this->view->flinecount		  =  htmlspecialchars($_SESSION['flinecount']);
         $this->view->fline			  =  htmlspecialchars($_SESSION['fline']);
         $this->view->line		  	  =  explode(';',$this->view->fline);
-        $this->view->dt		  	  	  =  htmlspecialchars($_SESSION['data']);
-        
-        //chmod($this->view->filename, 0644);
-        
+
         //toolbar for import of data
         $toolbar = $this->_owApp->toolbar;
         $toolbar->appendButton(OntoWiki_Toolbar::SUBMIT, array('name' => 'Submit', 'id' => 'selection'))
@@ -168,7 +157,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
         $postData = $this->_request->getPost();
         
         if (!empty($postData)) {      
-     	
+        
         $baseuri = $postData['b_uri'];
         $this->view->baseuri    = $baseuri;
         $restype = $postData['r_type'];
@@ -177,56 +166,66 @@ class CsvadapterController extends OntoWiki_Controller_Component
         $this->view->header    = $header;
         
         if (trim($restype) == '') {
-                $message = 'Ressource type must not be empty.';
+                $message = 'Ressource type must not be empty!';
                 $this->_owApp->appendMessage(new OntoWiki_Message($message, OntoWiki_Message::ERROR));
         }
         if ((trim($baseuri) == '')||(trim($baseuri) == 'http://')) {
-                $message = 'Base Uri must not be empty.';
+                $message = 'Base Uri must not be empty!';
                 $this->_owApp->appendMessage(new OntoWiki_Message($message, OntoWiki_Message::ERROR));
         }
-        $paramArray = array('firstline' => $this->view->line,
-        					'header' 	=> $header,
-        					'baseuri'	=> $baseuri,
-        					'restype' 	=> $restype,
-        					'filename' 	=> $this->view->filename
-        );
+        if (trim($header) == '') {
+        	$message = 'You must select whether you have a header!';
+        	$this->_owApp->appendMessage(new OntoWiki_Message($message, OntoWiki_Message::ERROR));
+        }
         
         //create mapping
-        $maippng = $this->_createMapping($paramArray);
-        $maprpl1  = str_replace('"', "'", $maippng);
-        //save mapping into file
-        $mapfile = $_SERVER['DOCUMENT_ROOT'].'mapping.sparql';
-        //chmod($mapfile, 0644);
-	//***********************
-        $fp = fopen($mapfile,"wb");
-        fwrite($fp,$maprpl1);
-        fclose($fp);
-        
-        $ttl = array();
-        
-        //call convert for ttl
-        $ttl = $this->_convert($mapfile, $this->view->dt);
-        //save ttl data into file
-            	$file1 = tempnam(sys_get_temp_dir(), 'ow');
-            	$temp = fopen($file1, 'wb');
-    	foreach ($ttl as $line) {
-    		fwrite($temp, $line . PHP_EOL);
-    	}
-    	fclose($temp);
-    	$filetype = 'ttl';
-    		
-    	$locator  = Erfurt_Syntax_RdfParser::LOCATOR_FILE;
-    	// import() call
-    	try {
-                $this->_import($file1, $filetype, $locator);
-            } catch (Exception $e) {
-                $message = $e->getMessage();
-                $this->_owApp->appendErrorMessage($message);
-                return;
-            }
-
-         $this->_owApp->appendSuccessMessage('Data successfully imported.');
-        
+        if (	   (trim($restype) != '') 
+        		&& ((trim($baseuri) != '') || (trim($baseuri) != 'http://'))
+        		&& (trim($header) != ''))
+        {
+        	$paramArray = array('firstline' => $this->view->line,
+        						'header' 	=> $header,
+        						'baseuri'	=> $baseuri,
+        						'restype' 	=> $restype,
+        						'filename' 	=> $this->view->filename
+        	);
+        	
+        	$maippng = $this->_createMapping($paramArray);
+        	$maprpl  = str_replace('"', "'", $maippng);
+        	//save mapping into file
+        	$mapfile = tempnam(sys_get_temp_dir(), 'ow');
+        	
+        	$fp = fopen($mapfile,"wb");
+        	fwrite($fp,$maprpl);
+        	fclose($fp);
+        	
+        	$ttl = array();
+        	
+        	//call convert for ttl
+        	$ttl = $this->_convert($mapfile, $this->view->filename);
+        	
+        	//save ttl data into file
+        	$ttlfile = tempnam(sys_get_temp_dir(), 'ow');
+        	$temp = fopen($ttlfile, 'wb');
+        	foreach ($ttl as $line) {
+        		fwrite($temp, $line . PHP_EOL);
+        		}
+        	fclose($temp);
+        	$filetype = 'ttl';
+        	
+        	$locator  = Erfurt_Syntax_RdfParser::LOCATOR_FILE;
+        	
+        	// import call
+        	
+        	try {
+        		$this->_import($ttlfile, $filetype, $locator);
+        		} catch (Exception $e) {
+        			$message = $e->getMessage();
+        			$this->_owApp->appendErrorMessage($message);
+        			return;
+        			}
+        		}
+        		
         //after success redirect to index site 
         $this->_redirect('');
         }
@@ -319,6 +318,7 @@ class CsvadapterController extends OntoWiki_Controller_Component
     	$header		= $paramArray['header'];
     	$baseuri	= $paramArray['baseuri'];
     	$restype	= $paramArray['restype'];
+    	$csvf		= $paramArray['filename'];
     	$pref 		= 'ab';
  
     	$len = strlen($baseuri);
@@ -351,21 +351,51 @@ PHP_EOL.'WHERE {'.PHP_EOL.
 		'BIND (CONCAT("URN:ISBN:",?ISBN) AS ?UISBN)'.PHP_EOL.
 		'}'.PHP_EOL.
 'OFFSET 1'.PHP_EOL;	
-    	} else {
-    		$j = 0;
-    		$k = 0;
+    	} 
+    	//if ($header == 'no')
+    		else
+    	{
     		$map1 = '?URI a '.$pref.':'.$restype.';'.PHP_EOL.'';
-    		for ($i =0; $i < count($firstline); $i++){
-    			$map1 .= $pref.':'.$abc[$i].' ?'.$abc[$i].';'.PHP_EOL;
-    		/*if (($abc[$i] > 0) && ($abc[$i] =='z')){
-    				$map1 .= $pref.':'.$abc[$j].$abc[$j+1].' ?'.$abc[$i].$abc[$j+1].';'.PHP_EOL;
-    				$j++;
-    			}
-    			if (($abc[$j] > 0) && ($abc[$j] =='yz')){
-    				$map1 .= $pref.':'.$abc[$k].$abc[$k+1].$abc[$k+2].' ?'.$abc[$i].$abc[$k+1].$abc[$k+2].';'.PHP_EOL;
-    				$k++;
-    			}*/
-    	}
+
+    		if (count($firstline) < strlen($abc)){
+	    		for ($i =0; $i < count($firstline); $i++){
+	    			$map1 .= $pref.':'.$abc[$i].' ?'.$abc[$i].';'.PHP_EOL;
+	    		}
+	    	} else {
+	    		$j = 0;
+	    		for ($i =0; $i < strlen($abc); $i++){
+	    			$map1 .= $pref.':'.$abc[$i].' ?'.$abc[$i].';'.PHP_EOL;
+	    			$j++;
+	    		}
+	    		if ($j < count($firstline))
+	    		{
+		    		for ($i =0; $i < (strlen($abc)-1); $i++){
+		    			if ($j == (count($firstline)-1)) break;
+		    			$data =$abc[$i].$abc[$i+1];
+		    			$map1 .= $pref.':'.$data.' ?'.$data.';'.PHP_EOL;
+				    	$j++;
+		    		}
+	    		}
+	    		if ($j < count($firstline))
+	    		{
+		    		for ($i =0; $i < (strlen($abc)-2); $i++){
+		    			if ($j == (count($firstline)-1)) break;
+		    			$data =$abc[$i].$abc[$i+1].$abc[$i+2];
+		    			$map1 .= $pref.':'.$data.' ?'.$data.';'.PHP_EOL;
+		    			$j++;
+		    		}
+	    		}
+	    		if ($j < count($firstline))
+	    		{
+		    		for ($i =0; $i < (strlen($abc)-2); $i++){
+		    			if ($j == (count($firstline)-1)) break;
+		    			$data =$abc[$i].$abc[$i+1].$abc[$i+2].$abc[$i+3];
+		    			$map1 .= $pref.':'.$data.' ?'.$data.';'.PHP_EOL;
+		    			$j++;
+		    			}
+	    			}
+	    		}
+	    	
     	$map1 .= '}'.PHP_EOL;
     	$map2 = 
 PHP_EOL.'WHERE {'.PHP_EOL.
@@ -381,7 +411,7 @@ PHP_EOL.'WHERE {'.PHP_EOL.
     	$str2 = 'PREFIX '.$pref.':<'.$baseuri.'>'.PHP_EOL.
     			'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'.PHP_EOL;
     	$str3 =  'CONSTRUCT {'.PHP_EOL;
-    	$str4 = 'FROM <file:file.csv>'.PHP_EOL;
+    	$str4 = 'FROM <file:'.$csvf.'>'.PHP_EOL;
     	   	
     	$mapping = $str1.$str2.$str3.$map1.PHP_EOL.''.$str4.''.$map2.'';
     	
@@ -393,21 +423,20 @@ PHP_EOL.'WHERE {'.PHP_EOL.
  * uses call of extern programm
  * @return turtle data
  */
-    protected function _convert($mapfile, $thdt){
+    protected function _convert($mapfile, $csvf){
     	
-    	$dt = $thdt;
     	$output = array();
     	$map = $mapfile;
-    	//chmod($map, 0644);
-    	//chmod ($_SERVER['DOCUMENT_ROOT'], 0777);
-    	$bin = $_SERVER['DOCUMENT_ROOT'].'OntoWiki/extensions/csvadapter/tarql/bin/tarql';
-    	$sparqlFile = $_SERVER['DOCUMENT_ROOT'].'mapping.sparql';
-    	$in = $_SERVER['DOCUMENT_ROOT'].'file.csv';
-    	//chmod($sparqlFile, 0644);
-    	//chmod($in, 0644);
-		 //.'2>&1'
+    	$csv = $csvf;
+    	$root = $_SERVER['DOCUMENT_ROOT'];
+    	if (substr($root, -1) != '/')
+    			{
+    				$root .= '/';
+    			}
+    	$bin = $root.'OntoWiki/extensions/csvadapter/tarql/bin/tarql';
+
 		 //Command for tarql call & tarql execute
-        $command = $bin . ' ' . $sparqlFile . ' ' . $in;
+    	$command = $bin . ' ' . $map . ' ' . $csv;
         exec ($command, $output, $return);
         if ($return == 0) {
         	$this->_owApp->appendSuccessMessage('Data successfully converted!'. PHP_EOL);
@@ -425,7 +454,9 @@ private function _import($file, $filetype, $locator)
         $modelIri = (string)$this->_model;
 
         try {
-            $this->_erfurt->getStore()->importRdf($modelIri, $file, $filetype, $locator);
+            if($this->_erfurt->getStore()->importRdf($modelIri, $file, $filetype, $locator)){
+            	$this->_owApp->appendSuccessMessage('Data successfully imported!');
+            }
         } catch (Erfurt_Exception $e) {
             // re-throw
             throw new OntoWiki_Controller_Exception(
@@ -434,6 +465,7 @@ private function _import($file, $filetype, $locator)
                 $e
             );
         }
+        
     }
 }
 
@@ -458,7 +490,7 @@ class Parser
     {
 
     	$this->_file = $filename;
-    	//chmod($this->_file, 0644);
+    	
     	$fileHandle = fopen($this->_file, 'r');
         
         $message = '';
