@@ -513,3 +513,4 @@ class Parser
         return $this->_resultArr;
     }
 }
+?>
